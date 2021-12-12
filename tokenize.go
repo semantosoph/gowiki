@@ -20,6 +20,7 @@ import (
 	//	"bytes"
 	"errors"
 	"fmt"
+
 	//	"html"
 	"regexp"
 	"sort"
@@ -36,6 +37,11 @@ type Token struct {
 	TClosed bool     `json:"tClosed,omitempty"`
 	TPipes  []string `json:"tPipes,omitempty"`
 }
+
+type Prefixes []string
+
+var ExtLinkPrefixes Prefixes = []string{"https://", "http://", "ftp://", "//"}
+var FileLinkPrefixes Prefixes = []string{"[[image:", "[[media:", "[[file:"}
 
 func (a *Article) parseRedirectLine(l string) ([]*Token, error) {
 	nt := make([]*Token, 0, 2)
@@ -220,18 +226,12 @@ func matchPrefixes(s string, prefixes []string) bool {
 	return false
 }
 
-var extlinkre = regexp.MustCompile(`^(http:)|(ftp:)|()//[^\s]+`)
-
 func isExtLink(l string) bool {
-	// return extlinkre.MatchString(l)
-	return matchPrefixes(l, []string{"http://", "ftp://", "//"})
+	return matchPrefixes(l, ExtLinkPrefixes)
 }
 
-var filelinkre = regexp.MustCompile(`(?i)^\[\[(?:image:)|(?:media:)|(?:file:)`)
-
 func possibleFileLink(l string) bool {
-	// return filelinkre.MatchString(l)
-	return matchPrefixes(l, []string{"[[image:", "[[media:", "[[file:"})
+	return matchPrefixes(l, FileLinkPrefixes)
 }
 
 func (a *Article) parseLink(l string) (int, []*Token, bool) {
