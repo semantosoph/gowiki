@@ -362,11 +362,8 @@ plLoop2:
 			}
 		case '<':
 			if spacepos > 0 {
-				//				e, tag, attr, closed, ok := a.decodeHTMLtag(l[idx:len(l)])
 				_, tag, _, _, ok := a.decodeHTMLtag(l[idx:len(l)])
-				//				fmt.Println("html tag in ext link. Line:", l, "\n\n", tag, ok)
 				if ok && tag == "/ref" {
-					//					fmt.Println("closing link...")
 					matchingpos = idx
 					endpos = idx
 					break plLoop2
@@ -657,7 +654,8 @@ func (a *Article) lineType(l string) string {
 
 func (a *Article) Tokenize(mw string, g PageGetter) ([]*Token, error) {
 	mwnc := a.stripComments(mw)
-	mw_stripped, nowikipremathmap := a.stripNowikiPreMath(mwnc)
+	mwnr := a.stripRefs(mwnc)
+	mw_stripped, nowikipremathmap := a.stripNowikiPreMath(mwnr)
 	mw_tmpl, templatemap := a.processTemplates(mw_stripped, nowikipremathmap, g)
 	mw_links := a.preprocessLinks(mw_tmpl)
 
@@ -719,6 +717,12 @@ func (a *Article) stripComments(mw string) string {
 	return commentsRe.ReplaceAllLiteralString(mw, "")
 }
 
+var refRe = regexp.MustCompile(`(?msU)<ref.*</ref>`)
+
+func (a *Article) stripRefs(mw string) string {
+	return refRe.ReplaceAllLiteralString(mw, "")
+}
+
 var nowikiOpenRe = regexp.MustCompile(`(?i)<\s*(nowiki)\s*[^>/]*>`)
 var nowikiCloseRe = regexp.MustCompile(`(?i)<(/nowiki)\s*[^>/]*>`)
 var preOpenRe = regexp.MustCompile(`(?i)<\s*(pre)\s*[^>]*>`)
@@ -740,14 +744,6 @@ func (a *Article) stripNowikiPreMath(mw string) (string, map[string]*Token) {
 	moc := mathOpenRe.FindAllStringSubmatchIndex(mw, -1)
 	mcc := mathCloseRe.FindAllStringSubmatchIndex(mw, -1)
 
-	/*
-		nwoc = append(nwoc, []int{len(mw) + 1, len(mw) + 1})
-		nwcc = append(nwcc, []int{len(mw) + 1, len(mw) + 1})
-		poc = append(poc, []int{len(mw) + 1, len(mw) + 1})
-		pcc = append(pcc, []int{len(mw) + 1, len(mw) + 1})
-		moc = append(moc, []int{len(mw) + 1, len(mw) + 1})
-		mcc = append(mcc, []int{len(mw) + 1, len(mw) + 1})
-	*/
 	for i := range nwoc {
 		nwoc[i] = append(nwoc[i], 0)
 	}
@@ -844,73 +840,3 @@ func (a *Article) preprocessLinks(s string) string {
 	}
 	return string(mw)
 }
-
-//var nowikiOpenRe = regexp.MustCompile(`(?i)<\s*nowiki\s*[^>/]*>`)
-//var nowikiCloseRe = regexp.MustCompile(`(?i)</nowiki\s*[^>/]*>`)
-//var nowikiOpenCloseRe = regexp.MustCompile(`(?i)<nowiki\s*[^>]*/>`)
-/*
-type WikiParser struct {
-	mw string
-}
-
-func NewWikiParser(mw string) *WikiParser {
-	return &WikiParser{mw: mw}
-}
-
-func (wp *WikiParser) doNowiki() {
-	openCandidates := nowikiOpenRe.FindAllStringIndex(wp.mw, -1)
-	closeCandidates := nowikiCloseRe.FindAllStringIndex(wp.mw, -1)
-	openCloseCandidates := nowikiOpenCloseRe.FindAllStringIndex(wp.mw, -1)
-	tail := []int{len(wp.mw) + 1, len(wp.mw) + 1}
-	openCandidates = append(openCandidates, tail)
-	closeCandidates = append(closeCandidates, tail)
-	openCloseCandidates = append(openCloseCandidates, tail)
-	oi := 0
-	ci := 0
-	oci := 0
-	inNowiki := false
-	ol = make([][]int, 0, len(openCandidates))
-	cl = make([][]int, 0, len(closeCandidates))
-	ocl = make([][]int, 0, len(openCloseCandidates))
-	for {
-		if oi == len(openCandidates)-1 &&
-			ci == len(closeCandidates)-1 &&
-			oci == len(openCloseCandidates)-1 {
-			break
-		}
-		switch {
-		case openCandidates[oi][0] <= closeCandidates[oi][0] &&
-			openCandidates[oi][0] <= openCloseloseCandidates[oi][0]:
-			if !inNowiki {
-				ol = append(ol.openCandidates[oi])
-				inNowiki = true
-			}
-			oi += 1
-
-		case closeCandidates[oi][0] <= openCandidates[oi][0] &&
-			closeCandidates[oi][0] <= openCloseloseCandidates[oi][0]:
-
-		default:
-		}
-	}
-}
-
-func (wp *WikiParser) Parse() {
-	doSGML()
-	doNowiki()
-	doMath()
-	doPre()
-	doBlanks()
-	doHTMLvalidation()
-	doReplaceVariables()
-	doHR()
-	doAllQuotes()
-	doHeadings()
-	doLists()
-	doDates()
-	doExternalLinks()
-	doInternalLinks()
-	doISBN()
-	doRecombine()
-}
-*/

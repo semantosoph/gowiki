@@ -17,6 +17,7 @@ limitations under the License.
 package gowiki
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -64,6 +65,21 @@ func TestExternalLink(t *testing.T) {
 
 	l := a.GetTextLinks()
 	if l[0].Text != "Test" || l[0].Link.PageName != "Https://test.org" {
-		t.Error("Error parsing media link ", l)
+		t.Error("Error parsing ext link ", l)
+	}
+}
+
+func TestRefRemoval(t *testing.T) {
+	mw := "Test<ref name=\"testref\">This is a text reference</ref>Test<ref>{{curly ref}}</ref>Test"
+	t.Log(mw)
+
+	a, err := ParseArticle("Test", mw, &DummyPageGetter{})
+	if err != nil {
+		t.Error("Error:", err)
+	}
+
+	l := a.GetText()
+	if strings.TrimSpace(l) != "TestTestTest" {
+		t.Error("Error removing ref ", l)
 	}
 }
