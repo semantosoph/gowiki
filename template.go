@@ -1,5 +1,6 @@
 /*
 Copyright (C) IBM Corporation 2015, Michele Franceschini <franceschini@us.ibm.com>
+Copyright (C) 2021 Sven Windisch <semantosoph@posteo.de>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -63,7 +64,6 @@ func findCurlyStreaks(mw string) [][]int {
 	out := [][]int{}
 	found := '.'
 	beg := 0
-	//	count :=0
 	for i, r := range mw {
 		switch r {
 		case found:
@@ -82,9 +82,7 @@ func findCurlyStreaks(mw string) [][]int {
 }
 
 func findTemplates(mw string) []*template {
-	//	tsl := templateStreaksRe.FindAllStringSubmatchIndex(mw, -1)
 	tsl := findCurlyStreaks(mw)
-	//	fmt.Println(tsl)
 	streaks := make([]streak, 0, len(tsl))
 	for _, pair := range tsl {
 		streaks = append(streaks, streak{
@@ -94,7 +92,6 @@ func findTemplates(mw string) []*template {
 			e:       pair[1],
 		})
 	}
-	//	fmt.Println(streaks)
 	tl := make([]*template, 0, 8)
 	i := 0
 	for i < len(streaks) {
@@ -128,10 +125,6 @@ func findTemplates(mw string) []*template {
 		i++
 	}
 	sort.Sort(byStart(tl))
-	/*	fmt.Println("Templates found:")
-		for i := range tl {
-			fmt.Println(tl[i])
-		} */
 	out := make([]*template, 0, 4)
 	cur_end := 0
 	for i := range tl {
@@ -148,15 +141,6 @@ func findTemplates(mw string) []*template {
 			}
 		}
 	}
-	/*	fmt.Println("Templates out:")
-		for i := range out {
-			fmt.Println(out[i])
-		}*/
-	/*	fmt.Println("Templates found:")
-		for i := range tl {
-			fmt.Println(mw[tl[i].b:tl[i].e])
-		}
-	*/
 	return out
 }
 
@@ -200,43 +184,13 @@ func findTemplateParamPos(mw string, t *template) [][]int { //first is position 
 	return out
 }
 
-/*func (a *Article) processTemplates(mw string, tokens map[string]*Token) (string, map[string]*Token) {
-	mlt := findTemplates(mw)
-	last := 0
-	out := make([]byte, 0, len(mw))
-	//	tokens := make(map[string]*Token, len(mlt))
-	for i, t := range mlt {
-		sb := fmt.Sprintf("\x07tb%05d", i)
-		se := fmt.Sprintf("\x07te%05d", i)
-		out = append(out, []byte(mw[last:t.b])...)
-		out = append(out, []byte(sb+a.renderTemplate(mw, t)+se)...)
-		last = t.e
-		tokens[sb] = &Token{
-			TText: fmt.Sprintf("%d", i),
-			TType: "tb",
-		}
-		tokens[se] = &Token{
-			TText: fmt.Sprintf("%d", i),
-			TType: "te",
-		}
-
-	}
-	out = append(out, []byte(mw[last:])...)
-	return string(out), tokens
-} */
-
 func (a *Article) processTemplates(mws string, tokens map[string]*Token, g PageGetter) (string, map[string]*Token) {
-	//strip nowiki noinclude etc here
-	//	mws := a.stripComments(mw)
-	//	mws = a.stripNoinclude(mws)
 
-	//	fmt.Println(mws)
 	mlt := findTemplates(mws)
 
 	last := 0
 	out := make([]byte, 0, len(mws))
 	for i, t := range mlt {
-		//		fmt.Println("Process templates:", *t)
 		sb := fmt.Sprintf("\x07tb%05d", i)
 		se := fmt.Sprintf("\x07te%05d", i)
 		tn, pm := a.renderInnerTemplates(mws, t, nil, g, 0)
@@ -331,13 +285,13 @@ func detectTemplateType(tn string) (string, string, string, string) {
 	return tn, "", "normal", ""
 }
 
-type TemplateRenderer func(name, mw string, params map[string]string) string
+type TemplateRenderer func(name string, params map[string]string) string
 
 var MagicMap map[string]TemplateRenderer = map[string]TemplateRenderer{
 	"DISPLAYTITLE": nil,
 }
 
-var noHashFunctionsMap map[string]bool = map[string]bool{
+var NoHashFunctionsMap map[string]bool = map[string]bool{
 	"displaytitle":     true,
 	"formatdate":       true,
 	"int":              true,
@@ -364,7 +318,7 @@ var noHashFunctionsMap map[string]bool = map[string]bool{
 	"talkspacee": true, "talkspace": true, "ucfirst": true, "uc": true,
 	"urlencode": true,
 }
-var variablesMap map[string]bool = map[string]bool{
+var VariablesMap map[string]bool = map[string]bool{
 	"articlepath":         true,
 	"basepagenamee":       true,
 	"basepagename":        true,
@@ -445,7 +399,13 @@ var variablesMap map[string]bool = map[string]bool{
 }
 
 func (a *Article) renderTemplateMagic(name string, params map[string]string) string {
-	return ""
+	renderer, ok := MagicMap[name]
+	text := ""
+	if ok {
+		text = renderer(name, params)
+	}
+
+	return text
 }
 
 func (a *Article) renderTemplateExt(name string, params map[string]string) string {
@@ -456,7 +416,7 @@ func (a *Article) renderTemplateRecursive(name string, params map[string]string,
 	if depth > 4 {
 		return ""
 	}
-	//name and parameters have already been substituted so they are guarranteed not to contain any template
+	//name and parameters have already been substituted so they are guaranteed not to contain any template
 
 	//establish the type of template
 	switch templateType(name) {
@@ -497,8 +457,6 @@ func (a *Article) TranscludeTemplatesRecursive(mw string, params map[string]stri
 		followed++
 	}
 	mws = a.stripNoinclude(mws)
-
-	//	fmt.Println(ds[depth], "TranscludeTemplatesRecursive", mws)
 	mlt := findTemplates(mws)
 
 	last := 0
@@ -520,15 +478,12 @@ var ds []string = []string{"   ", "      ", "         ", "            ", "      
 
 func (a *Article) renderInnerTemplates(mws string, t *template, params map[string]string, g PageGetter, depth int) (string, map[string]string) {
 	// render inner templates first
-	//	fmt.Println(ds[depth], *t, "\n", ds[depth], "Template:\n", ds[depth], mws[t.b:t.e])
 	for _, it := range t.children {
 		if !it.rendered {
 			a.renderInnerTemplates(mws, it, params, g, depth)
 		}
 	}
-	//	fmt.Println(ds[depth], "Working on", mws[t.b:t.e])
 	pp := findTemplateParamPos(mws, t) //position of the pipes for this template
-	//	fmt.Println(ds[depth], "pp:", pp)
 
 	n := 2
 	if t.isparam {
@@ -538,14 +493,11 @@ func (a *Article) renderInnerTemplates(mws string, t *template, params map[strin
 
 	var mw string
 	var tb int
-	//	var te int
 	if len(t.children) == 0 {
-		//		fmt.Println(ds[depth], "No nested templates in", mws[t.b:t.e])
 		mw = mws
 		tb = t.b
 		//		te = t.e
 	} else {
-		//		fmt.Println(ds[depth], "Nested templates: fixing pp")
 		//substitute the strings and update pp
 		tci := 0
 		ioff := t.children[tci].b
@@ -556,8 +508,6 @@ func (a *Article) renderInnerTemplates(mws string, t *template, params map[strin
 		ppi0 := 0
 		ppi1 := 0
 		for ppi0 < len(pp) {
-			//			fmt.Println(mws)
-			//			fmt.Println(len(mws), tci, ioff, ooff, ppi0, ppi1, pp)
 			if pp[ppi0][ppi1] <= ioff {
 				pp[ppi0][ppi1] += ooff
 				ppi1++
@@ -575,13 +525,11 @@ func (a *Article) renderInnerTemplates(mws string, t *template, params map[strin
 				} else {
 					ioff = t.children[tci].b
 				}
-				//				fmt.Println(ds[depth], tci, teoff, ioff)
 				mw += mws[teoff:ioff]
 			}
 		}
-		//		te = len(mw)
 	}
-	//	fmt.Println("len(mw):", len(mw), "mw:", mw, "\npp:", pp)
+
 	var tn string
 	if len(pp) > 1 {
 		tn = fmt.Sprint(strings.TrimSpace(mw[tb+n : pp[0][0]]))
@@ -624,16 +572,14 @@ func templateType(tn string) string {
 	index := strings.Index(tn, ":")
 	tns := strings.TrimSpace(tn)
 	var base string
-	//	var attr string
 	if index > 0 {
 		base = strings.TrimSpace(tn[:index])
-		//		attr = strings.TrimSpace(tn[index+1:])
 	} else {
 		base = tns
 	}
 	base = strings.ToLower(base)
-	_, ok1 := noHashFunctionsMap[base]
-	_, ok2 := variablesMap[base]
+	_, ok1 := NoHashFunctionsMap[base]
+	_, ok2 := VariablesMap[base]
 	if ok1 || ok2 {
 		return "magic"
 	}
