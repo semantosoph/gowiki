@@ -54,3 +54,18 @@ func TestMagicMap(t *testing.T) {
 		t.Error("Error in magic map ", l)
 	}
 }
+
+func TestNilFunc(t *testing.T) {
+	mw := "{{DISPLAYTITLE}}"
+	t.Log(mw)
+
+	a, err := ParseArticle("Test", mw, &DummyPageGetter{})
+	if err != nil {
+		t.Error("Error:", err)
+	}
+
+	l := a.GetText()
+	if strings.TrimSpace(l) != "" {
+		t.Error("NIL entry in magic map not caught", l)
+	}
+}

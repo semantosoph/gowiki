@@ -401,7 +401,7 @@ var VariablesMap map[string]bool = map[string]bool{
 func (a *Article) renderTemplateMagic(name string, params map[string]string) string {
 	renderer, ok := MagicMap[name]
 	text := ""
-	if ok {
+	if ok && renderer != nil {
 		text = renderer(name, params)
 	}
 
