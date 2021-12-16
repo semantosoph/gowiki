@@ -18,8 +18,6 @@ package gowiki
 
 import (
 	"encoding/json"
-	//	"os"
-	//	"strings"
 	"testing"
 )
 

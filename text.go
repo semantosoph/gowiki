@@ -26,8 +26,10 @@ func (a *Article) appendText(t string) {
 	a.text.WriteString(t)
 }
 
-func (a *Article) genTextInternal(root *ParseNode, indent int) {
+// fullText determines whether to generate the complete article text (true) or just the article abstract (false)
+func (a *Article) genTextInternal(root *ParseNode, fullText bool) {
 	lastwasspace := false
+	lastwasimage := false
 	for _, n := range root.Nodes {
 		var linkStart int
 		var fl FullWikiLink
@@ -43,8 +45,11 @@ func (a *Article) genTextInternal(root *ParseNode, indent int) {
 		case "text":
 			a.appendText(n.Contents)
 		case "image":
-			a.appendText("\n")
-			tappend = "\n"
+			if fullText {
+				a.appendText("\n")
+				tappend = "\n"
+			}
+			lastwasimage = true
 		case "link":
 			isLink = true
 			linkStart = len(a.text.Bytes())
@@ -54,8 +59,8 @@ func (a *Article) genTextInternal(root *ParseNode, indent int) {
 			case "h1", "h2", "h3", "h4", "h5", "h6":
 				a.appendText("\n")
 				tappend = "\n"
-				if len(a.AbstractText) == 0 {
-					a.AbstractText = a.text.String()
+				if !fullText {
+					return
 				}
 			case "br":
 				a.appendText("\n")
@@ -64,7 +69,14 @@ func (a *Article) genTextInternal(root *ParseNode, indent int) {
 			}
 		}
 		if len(n.Nodes) > 0 {
-			a.genTextInternal(n, 0)
+			if lastwasimage {
+				if fullText {
+					a.genTextInternal(n, fullText)
+				}
+				lastwasimage = false
+			} else {
+				a.genTextInternal(n, fullText)
+			}
 		}
 		if isLink {
 			ttmp := a.text.Bytes()
@@ -76,7 +88,6 @@ func (a *Article) genTextInternal(root *ParseNode, indent int) {
 		if n.NType == "space" {
 			lastwasspace = true
 		}
-		//		a.Text += tappend
 		a.appendText(tappend)
 	}
 
@@ -87,13 +98,19 @@ func (a *Article) genText() error {
 	a.text = bytes.NewBuffer(make([]byte, 1024*1024, 1024*1024))
 	a.text.Truncate(0)
 	a.nchar = 0
-	a.AbstractText = ""
-	a.genTextInternal(a.Root, 0)
+	a.genTextInternal(a.Root, true)
 	a.Text = string(a.text.Bytes())
-	if len(a.AbstractText) == 0 {
-		a.AbstractText = a.Text
-	}
 	a.gt = true
+	return nil
+}
+
+func (a *Article) genAbstract() error {
+	a.text = bytes.NewBuffer(make([]byte, 1024*1024, 1024*1024))
+	a.text.Truncate(0)
+	a.nchar = 0
+	a.genTextInternal(a.Root, false)
+	a.AbstractText = string(a.text.Bytes())
+	a.ga = true
 	return nil
 }
 

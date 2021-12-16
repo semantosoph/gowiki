@@ -18,14 +18,11 @@ package gowiki
 
 import (
 	"bytes"
-	//	"errors"
-	//	"fmt"
 	"html"
 	"regexp"
 	"strings"
 )
 
-// var Debug bool = false
 var DebugLevel int = 0
 
 type Article struct {
@@ -37,15 +34,15 @@ type Article struct {
 	AbstractText string
 	Media        []WikiLink
 	Tokens       []*Token
-	//	OldTokens    []*Token
-	Root      *ParseNode
-	Parsed    bool
-	Text      string
-	TextLinks []FullWikiLink
-	Templates []*Template
+	Root         *ParseNode
+	Parsed       bool
+	Text         string
+	TextLinks    []FullWikiLink
+	Templates    []*Template
 
 	// unexported fields
 	gt                   bool
+	ga                   bool
 	text                 *bytes.Buffer
 	nchar                int
 	innerParseErrorCount int
@@ -85,8 +82,8 @@ func (a *Article) GetText() string {
 }
 
 func (a *Article) GetAbstract() string {
-	if !a.gt {
-		a.genText()
+	if !a.ga {
+		a.genAbstract()
 	}
 	return a.AbstractText
 }
@@ -141,7 +138,7 @@ func (namespaces Namespaces) WikiCanonicalFormNamespaceEsc(l string, defaultName
 		ns, ok := namespaces[strings.ToLower(cns)]
 		switch {
 		case ok && len(cns) > 0:
-			namespace = ns //strings.ToUpper(cns[0:1]) + strings.ToLower(cns[1:])
+			namespace = ns
 		case ok:
 			namespace = ""
 		default:
