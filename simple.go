@@ -16,10 +16,6 @@ limitations under the License.
 
 package gowiki
 
-//	"bytes"
-//	"errors"
-//	"fmt"
-
 func (a *Article) ParseSimple() error {
 	a.Text = a.MediaWiki
 	a.Parsed = true

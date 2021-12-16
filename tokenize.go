@@ -17,11 +17,8 @@ limitations under the License.
 package gowiki
 
 import (
-	//	"bytes"
 	"errors"
 	"fmt"
-
-	//	"html"
 	"regexp"
 	"sort"
 	"strings"
@@ -160,14 +157,6 @@ func (a *Article) decodeHTMLtag(l string) (int, string, string, bool, bool) {
 	closefound := false
 	tagend := 0
 	tagstart := 0
-	//taking care of comments at preprocessing time
-	/*	if strings.HasPrefix(l, "<!--") {
-		i := strings.Index(l[4:], "-->")
-		if i == -1 {
-			return len(l), "!--", l[4:], true, true
-		}
-		return 4 + i + 3, "!--", l[4 : 4+i], true, true
-	} */
 dhtLoop:
 	for idx, rv := range l {
 		//		fmt.Println(string(rv), inquote, string(quote), idx, matchingpos)
@@ -214,7 +203,6 @@ dhtLoop:
 		attr = l[tagend:matchingpos]
 	}
 	return matchingpos + 1, tag, attr, closefound, true
-	//	e, tag, attr, closed, ok := decodeHTMLtag(l[pos:end])
 }
 
 func matchPrefixes(s string, prefixes []string) bool {
@@ -368,7 +356,6 @@ plLoop2:
 					endpos = idx
 					break plLoop2
 				}
-
 			}
 		case ']':
 			if intLinkOpen && len(l) > idx+1 && l[idx+1] == ']' {
@@ -469,7 +456,6 @@ plLoop:
 	if len(pipepos) == 0 {
 		link = WikiCanonicalForm(l[2:matchingpos])
 		nt = []*Token{&Token{TText: l[2:matchingpos], TType: "text"}}
-
 	} else {
 		link = WikiCanonicalForm(l[2:pipepos[0]])
 		for i := 0; i < len(pipepos)-1; i++ {
@@ -507,12 +493,10 @@ func (a *Article) decodeBehavSwitch(l string) (int, bool) {
 	} else {
 		return len(match), true
 	}
-	// e, ok := decodeMagic(l[pos:end])
 }
 
 func (a *Article) parseInlineText(l string, start, end int) ([]*Token, error) {
 	nt := make([]*Token, 0)
-	//	fmt.Println("in parseInlineText")
 
 	tStart, tEnd := start, start
 
@@ -544,19 +528,6 @@ func (a *Article) parseInlineText(l string, start, end int) ([]*Token, error) {
 				tStart, tEnd = pos, pos
 				continue
 			}
-			/*		case '{':
-					e, tt, ok := a.parseTemplateEtc(l[pos:end])
-					fmt.Println("template:", e, tt, ok)
-					if ok {
-						if len(cs) > 0 {
-							nt = append(nt, &Token{TText: cs, TType: "text"})
-						}
-						nt = append(nt, tt...)
-						pos += e
-						cs = ""
-						continue
-					}
-					cs += string(rv) */
 		case '_':
 			e, ok := a.decodeBehavSwitch(l[pos:end])
 			if ok {
@@ -693,20 +664,18 @@ func (a *Article) Tokenize(mw string, g PageGetter) ([]*Token, error) {
 	for i := range tokens {
 		if tokens[i].TType == "special" {
 			specialcount++
-			t, ok := templatemap[tokens[i].TText] //nowikipremathmap[tokens[i].TText]
+			t, ok := templatemap[tokens[i].TText]
 			if !ok {
 				return nil, errors.New("special not in map")
 			}
 			tokens[i] = t
 		}
 	}
-	//	fmt.Println(specialcount, len(nowikipremathmap))
-	//	if specialcount != len(nowikipremathmap) {
+
 	if specialcount != len(templatemap) {
 		if DebugLevel > 0 {
 			fmt.Println("[Tokenize] Warning: number of specials in map differs from number found")
 		}
-		//				return nil, errors.New("number of specials in map differs from number found")
 	}
 	return tokens, nil
 }
@@ -770,7 +739,7 @@ func (a *Article) stripNowikiPreMath(mw string) (string, map[string]*Token) {
 	am = append(am, moc...)
 	am = append(am, mcc...)
 	sort.Sort(ssInt(am))
-	//	fmt.Println(am)
+
 	tokens := make(map[string]*Token, len(am))
 	if len(am) == 0 {
 		return mw, tokens
@@ -782,11 +751,10 @@ func (a *Article) stripNowikiPreMath(mw string) (string, map[string]*Token) {
 	openidx := 0
 	count := 0
 	for i := range am {
-		//		fmt.Println("ctype", ctype, "lastclose", lastclose, "count", count, "openidx", openidx, "am[i]", am[i])
 		if (ctype != -1) && (am[i][4] == ctype+1) && (am[openidx][1] <= am[i][0]) {
 			// closing an open one
 			special := fmt.Sprintf("\x07%07d", count)
-			//			special := fmt.Sprintf("@%07d", count)
+
 			tokens[special] = &Token{
 				TText: mw[am[openidx][1]:am[i][0]],
 				TType: strings.ToLower(mw[am[openidx][2]:am[openidx][3]]),
@@ -806,7 +774,7 @@ func (a *Article) stripNowikiPreMath(mw string) (string, map[string]*Token) {
 	if ctype != -1 {
 		//it's open: close it
 		special := fmt.Sprintf("\x07%07d", count)
-		//		special := fmt.Sprintf("@%07d", count)
+
 		tokens[special] = &Token{
 			TText: mw[am[openidx][1]:len(mw)],
 			TType: strings.ToLower(mw[am[openidx][2]:am[openidx][3]]),

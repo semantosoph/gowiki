@@ -1,5 +1,6 @@
 /*
 Copyright (C) IBM Corporation 2015, Michele Franceschini <franceschini@us.ibm.com>
+Copyright (C) 2021, Sven Windisch <semantosoph@posteo.de>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -99,21 +100,15 @@ func (a *Article) doQuotes() {
 	tn := make([]*Token, 0, len(a.Tokens))
 	t := a.Tokens
 	for ; ni < len(t); ni++ {
-		// log.Println(*t[ni])
-
 		if t[ni].TType == "quote" {
 			l++
-			// log.Println(l)
 		}
 		if t[ni].TType != "quote" || ni == len(t)-1 {
 			switch {
 			case l == 0:
-				// log.Println(l)
 			case l == 1:
-				// log.Println(l)
 				tn = append(tn, &Token{TText: "'", TType: "text"})
 			case l == 2:
-				// log.Println(l)
 				switch state {
 				case QS_b:
 					tn = append(tn, &Token{TType: "html", TText: "i"})
@@ -134,7 +129,6 @@ func (a *Article) doQuotes() {
 					state = QS_i
 				}
 			case l == 3, l == 4:
-				// log.Println(l)
 				if l == 4 {
 					tn = append(tn, &Token{TText: "'", TType: "text"})
 				}
@@ -158,7 +152,6 @@ func (a *Article) doQuotes() {
 					state = QS_b
 				}
 			case l >= 5:
-				// log.Println(l)
 				s := ""
 				for i := 5; i < l; i++ {
 					s += "'"
@@ -193,7 +186,6 @@ func (a *Article) doQuotes() {
 		}
 
 		if t[ni].TType == "link" || t[ni].TType == "extlink" || t[ni].TType == "filelink" {
-			// log.Println(l)
 			save = state
 			switch state {
 			case QS_b:
@@ -211,7 +203,6 @@ func (a *Article) doQuotes() {
 			l = 0
 		}
 		if t[ni].TType == "closelink" || t[ni].TType == "closeextlink" || t[ni].TType == "closefilelink" {
-			// log.Println(l)
 			switch state {
 			case QS_b:
 				tn = append(tn, &Token{TType: "html", TText: "/b"})
@@ -230,11 +221,9 @@ func (a *Article) doQuotes() {
 		}
 
 		if t[ni].TType != "quote" && t[ni].TType != "newline" {
-			// log.Println(l)
 			tn = append(tn, t[ni])
 		}
 		if t[ni].TType == "newline" || ni == len(t)-1 {
-			// log.Println(l)
 			switch state {
 			case QS_b:
 				tn = append(tn, &Token{TType: "html", TText: "/b"})
@@ -252,13 +241,11 @@ func (a *Article) doQuotes() {
 			save = QS_none
 		}
 		if t[ni].TType == "newline" {
-			// log.Println(l)
 			tn = append(tn, t[ni])
 		}
 
 	}
 	a.Tokens = tn
-	//	a.OldTokens = t
 }
 
 //nowiki, wikipre, pre, math, quote, colon, magic, h?, *, #, ;, :, html,
@@ -283,7 +270,6 @@ func (a *Article) internalParse(t []*Token) ([]*ParseNode, error) {
 	lastti := -1
 	for ti < len(t) {
 		if ti == lastti {
-			//			fmt.Println(len(t), ti, *t[ti], *t[ti-1], *t[ti+1])
 			return nil, errors.New("parsing issue")
 		}
 		lastti = ti
@@ -512,84 +498,6 @@ func (a *Article) internalParse(t []*Token) ([]*ParseNode, error) {
 			}
 		case "*", "#", ";", ":":
 			ti += 1
-			/*			stack := ""
-						si := 0
-						ni := ti
-						ln := &ParseNode{NType: "root", Nodes: make([]*ParseNode, 0, 4)}
-						for {
-
-							this := ""
-							islist := false
-							for ; ni < len(t); ni++ {
-								switch t[ni].TType {
-								case "*", "#", ";", ":":
-									islist = true
-								}
-								if islist {
-									this += t[ni].TType
-								} else {
-									break
-								}
-							}
-							same := 0
-							for i := 0; i < len(this) && i < len(stack); i++ {
-								if this[i] == stack[i] ||
-									(this[i] == ';' && stack[i] == ':') ||
-									(this[i] == ':' && stack[i] == ';') {
-									same++
-								} else {
-									break
-								}
-							}
-							n := ln
-							for i := 0; i < same; i++ {
-								n = n.Nodes[len(n.Nodes)-1]
-								n = n.Nodes[len(n.Nodes)-1]
-							}
-
-							for i := same; i < len(this); i++ { //open
-								var nn *ParseNode
-								switch this[i] {
-								case '*':
-									nn = &ParseNode{NType: "html", NSubType: "ul"}
-								case '#':
-									nn = &ParseNode{NType: "html", NSubType: "ol"}
-								case ';':
-									nn = &ParseNode{NType: "html", NSubType: "dl"}
-								case ':':
-									nn = &ParseNode{NType: "html", NSubType: "dl"}
-								}
-								nn.Nodes = make([]*ParseNode, 0, 1)
-								n.Nodes = append(n.Nodes, nn)
-								n = nn
-								if i < len(this)-1 {
-									var elem *ParseNode
-									switch this[len] {
-									case '*', '#':
-										elem = &ParseNode{NType: "html", NSubType: "li"}
-									case ';':
-										elem = &ParseNode{NType: "html", NSubType: "dt"}
-									case ':':
-										elem = &ParseNode{NType: "html", NSubType: "dd"}
-									}
-									elem.Nodes = make([]*ParseNode, 0, 1)
-									n.Nodes = append(n.Nodes, elem)
-									n = elem
-								}
-							}
-							var nitem *ParseNode
-							switch this[len] {
-							case '*', '#':
-								nitem = &ParseNode{NType: "html", NSubType: "li"}
-							case ';':
-								nitem = &ParseNode{NType: "html", NSubType: "dt"}
-							case ':':
-								nitem = &ParseNode{NType: "html", NSubType: "dd"}
-							}
-							n := &ParseNode{NType: "html", NSubType: st}
-							nl = append(nl, n)
-
-						} */
 		case "newline":
 			n := &ParseNode{NType: "text", Contents: "\n"}
 			nl = append(nl, n)
@@ -621,7 +529,6 @@ func (a *Article) internalParse(t []*Token) ([]*ParseNode, error) {
 			}
 			if templateIndex >= len(a.Templates) {
 				return nil, errors.New("Template index out of range")
-				//fmt.Println("Template index out of range", t[ti])
 			} else {
 				n := &ParseNode{NType: t[ti].TType, Contents: a.Templates[templateIndex].Name}
 				nl = append(nl, n)
